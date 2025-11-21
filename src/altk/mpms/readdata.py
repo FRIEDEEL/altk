@@ -18,12 +18,15 @@ def readdata(file: str) -> DataFrame:
 
     Returns:
         pd.DataFrame: Pandas Dataframe with data.
+            Useful columns:
+                Field (Oe)
+                Temperature (K)
+                Long Moment (emu)
 
     Raises:
         FileNotFoundError: File of the given file path is not found.
-        StartPositionNotFound: Data start line does not exist in this file
+        StartPositionNotFound: Data start line does not exist in this file.
     """
-
     try:
         logger.info(f"Reading from \"{file}\".")
         with open(file, "r") as f:
