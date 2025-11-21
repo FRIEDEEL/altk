@@ -8,6 +8,11 @@ from altk.utils._exceptions import DataFileInvalid
 
 logger = logging.getLogger(__name__)
 
+COL_T = "Temperature (K)"
+COL_H = "Field (Oe)"
+COL_M = "Long Moment (emu)"
+
+
 def read_mpms_data(file: str) -> DataFrame:
     """Read .dat datafile from mpms.
 
@@ -43,7 +48,7 @@ def plot_MT(ax: Axes, df: DataFrame, **kwargs):
         ax (Axes): ax to plot
         df (DataFrame): data to plot
     """
-    ax.plot(df['Temperature (K)'], df['Long Moment (emu)'], **kwargs)
+    ax.plot(df[COL_T], df[COL_M], **kwargs)
     ax.set_xlabel("T (K)")
     ax.set_ylabel("M (emu)")
 
@@ -54,6 +59,6 @@ def plot_MH(ax: Axes, df: DataFrame, **kwargs):
         ax (Axes): ax to plot
         df (DataFrame): data to plot
     """
-    ax.plot(df['Field (Oe)'], df['Long Moment (emu)'], **kwargs)
+    ax.plot(df[COL_H], df[COL_M], **kwargs)
     ax.set_xlabel("H (Oe)")
     ax.set_ylabel("M (emu)")
