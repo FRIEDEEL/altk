@@ -21,6 +21,7 @@ FigOrSubFig = Union[Figure, SubFigure]
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass(frozen=True)
 class ZoomArea:
     """Normalized zoom area definition.
@@ -37,6 +38,7 @@ class ZoomArea:
     x2: float
     y2: float
 
+
 def read_program_data(file: str):
     logger.info(f'Reading from "{file}"')
     df = pd.read_csv(file)
@@ -49,6 +51,7 @@ def read_program_data(file: str):
 
     seq_array = df[["time", "temperature"]].to_numpy()
     return seq_array
+
 
 def write_program_to_csv():
     pass
@@ -104,7 +107,9 @@ def plot_furnace_program(
     # Normalize zoom areas if provided.
     normalized_zoom_areas: List[ZoomArea] = []
     if zoom_areas:
-        normalized_zoom_areas = _normalize_zoom_areas(sequences, zoom_areas)
+        normalized_zoom_areas = _normalize_zoom_areas(
+            sequences, zoom_areas, padding_fraction_x=0.2
+        )
         # Sort zoom areas by x1 for nicer layout (left to right).
         normalized_zoom_areas.sort(key=lambda area: area.x1)
 
@@ -128,9 +133,9 @@ def plot_furnace_program(
         2,
         n_zoom,
         height_ratios=[3, 2],
-        # figure=fig, # type: ignore[arg-type] 
-    ) 
-
+        wspace=0.5
+        # figure=fig, # type: ignore[arg-type]
+    )
     ax_main = fig.add_subplot(gs[0, :])
 
     _plot_program_single(
@@ -166,7 +171,7 @@ def plot_furnace_program(
             sequences=sequences,
             color_cycle=colors,
             xy_range=(area.x1, area.y1, area.x2, area.y2),
-            draw_total_time=True,
+            draw_total_time=False,
             draw_projections=True,
             y_round_digits=y_round_digits,
         )
@@ -187,7 +192,8 @@ def _validate_sequences(sequences: Sequence[Array2D]) -> None:
 def _normalize_zoom_areas(
     sequences: Sequence[Array2D],
     zoom_areas: Sequence[ZoomAreaLike],
-    padding_fraction: float = 0.1,
+    padding_fraction_x: float = 0.0,
+    padding_fraction_y: float = 0.1,
 ) -> List[ZoomArea]:
     """Normalize zoom area definitions into full (x1, y1, x2, y2) boxes.
 
@@ -234,7 +240,7 @@ def _normalize_zoom_areas(
 
             x1, y1, x2, y2 = x1_raw, y1_raw, x2_raw, y2_raw
         elif len(area) == 4:
-            x1_raw, y1_raw, x2_raw, y2_raw = map(float, area)
+            x1_raw,  x2_raw, y1_raw, y2_raw = map(float, area)
             if x2_raw < x1_raw:
                 x1_raw, x2_raw = x2_raw, x1_raw
             if y2_raw < y1_raw:
@@ -242,24 +248,23 @@ def _normalize_zoom_areas(
             x1, y1, x2, y2 = x1_raw, y1_raw, x2_raw, y2_raw
         else:
             raise ValueError(
-                "Zoom area must be either (x1, x2) or (x1, y1, x2, y2). "
-                f"Got {area!r}"
+                f"Zoom area must be either (x1, x2) or (x1, x2, y1, y2). Got {area!r}"
             )
-
-        # Expand the box by padding_fraction on all sides.
-        dx = (x2 - x1) * padding_fraction
-        dy = (y2 - y1) * padding_fraction
-
-        x1 -= dx
-        x2 += dx
-        y1 -= dy
-        y2 += dy
 
         # Clamp to global ranges to avoid going too far out.
         x1 = max(x1, global_xmin)
         x2 = min(x2, global_xmax)
         y1 = max(y1, global_ymin)
         y2 = min(y2, global_ymax)
+
+        # Expand the box by padding_fraction on all sides.
+        dx = (x2 - x1) * padding_fraction_x
+        dy = (y2 - y1) * padding_fraction_y
+
+        x1 -= dx
+        x2 += dx
+        y1 -= dy
+        y2 += dy
 
         normalized.append(ZoomArea(x1=x1, y1=y1, x2=x2, y2=y2))
 
@@ -454,7 +459,7 @@ def _connect_main_and_zoom(
     different axes.
     """
     # Main axes: data coordinates of rectangle upper corners.
-    main_points_data = [(area.x1, area.y2), (area.x2, area.y2)]
+    main_points_data = [(area.x1, area.y1), (area.x2, area.y1)]
     main_points_fig: List[Tuple[float, float]] = []
     for x_data, y_data in main_points_data:
         x_disp, y_disp = ax_main.transData.transform((x_data, y_data))
