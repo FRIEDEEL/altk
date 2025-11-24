@@ -2,8 +2,11 @@ import pandas as pd
 from matplotlib.axes import Axes
 from pandas import DataFrame
 from altk.utils._exceptions import DataFileInvalid
+import numpy as np
 
 import logging
+
+from typing import Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -17,19 +20,21 @@ def read_program_data(file: str):
     logger.debug(f"{set(df.columns)}")
     if missing:
         raise DataFileInvalid(f"Required columns missing: {missing}")
-    return df
+    seq_array = df[["time", "temperature"]].to_numpy()
+    logger.debug(f"Shape of array: {seq_array.shape}")
+    return seq_array
 
 def write_program_to_csv():
     pass
 
 
-def plot_furnace_program(ax: Axes, df: DataFrame, **plot_kwargs):
-    if "step" in df.columns:
-        df = df.sort_values(by="step")
-    time_accumulated = [df["time"].iloc[0:i].sum() for i in range(len(df) + 1)] # calc accumulated time len+1
-    logger.info(time_accumulated) 
+def plot_furnace_program(ax: Axes, seq: np.ndarray, zoom_areas: Sequence[Tuple[int, int]] = []):
+    time_accumulated = seq[:,0]
+    temperature = seq[:, 1]
 
-    temp_ = pd.concat([pd.Series([0]), df["temperature"]]) # add a 0 - point to plot
-    logger.info(f"temp_: {temp_}")
+    if len(zoom_areas) > 0:
+        _plot_furnace_program_with_zooms(time_accumulated, temperature, zoom_areas)
+        
 
-    ax.plot(time_accumulated, temp_, **plot_kwargs)
+def _plot_furnace_program_with_zooms(time:np.ndarray, temperature:np.ndarray, zoom_areas):
+    pass
