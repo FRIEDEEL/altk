@@ -1,5 +1,5 @@
 import logging
-from typing import Sequence, Tuple, Union, List, Optional
+from typing import Sequence, Tuple, Union, List, Optional, Literal
 from dataclasses import dataclass
 
 import numpy as np
@@ -62,6 +62,8 @@ def plot_furnace_program(
     sequences: Sequence[Array2D],
     zoom_areas: Optional[Sequence[ZoomAreaLike]] = None,
     *,
+    intervals: Optional[Sequence[Tuple[float, float, str]]] = None,
+    time_mode: Literal["relative", "absolute"] = "relative",
     colors: Optional[Sequence[str]] = None,
     y_round_digits: int = 6,
 ) -> None:
@@ -102,6 +104,15 @@ def plot_furnace_program(
         logger.warning("No sequences provided; nothing will be plotted.")
         return
 
+    # Apply time mode: relative or absolute time
+    if time_mode == "relative":
+        new_sequences: List[Array2D] = []
+        for seq in sequences:
+            seq_abs = seq.copy()
+            seq_abs[:, 0] = np.cumsum(seq_abs[:, 0])
+            new_sequences.append(seq_abs)
+        sequences = new_sequences
+
     _validate_sequences(sequences)
 
     # Normalize zoom areas if provided.
@@ -121,12 +132,12 @@ def plot_furnace_program(
             sequences=sequences,
             color_cycle=colors,
             xy_range=None,
-            draw_total_time=True,
+            intervals=intervals,
             draw_projections=True,
             y_round_digits=y_round_digits,
         )
         return
-
+    
     # Layout: main axes on top, zoom axes in a row below.
     n_zoom = len(normalized_zoom_areas)
     gs = GridSpec(
@@ -143,10 +154,14 @@ def plot_furnace_program(
         sequences=sequences,
         color_cycle=colors,
         xy_range=None,
-        draw_total_time=True,
         draw_projections=True,
+        intervals=intervals,
         y_round_digits=y_round_digits,
     )
+    # Expand y-lim upwards to leave space for interval arrows
+    y_min, y_max = ax_main.get_ylim()
+    extra = 0.2 * (y_max - y_min)
+    ax_main.set_ylim(y_min, y_max + extra)
 
     # Draw zoom rectangles on the main axes.
     for area in normalized_zoom_areas:
@@ -171,7 +186,7 @@ def plot_furnace_program(
             sequences=sequences,
             color_cycle=colors,
             xy_range=(area.x1, area.y1, area.x2, area.y2),
-            draw_total_time=False,
+            intervals=None,
             draw_projections=True,
             y_round_digits=y_round_digits,
         )
@@ -277,7 +292,7 @@ def _plot_program_single(
     color_cycle: Optional[Sequence[str]],
     xy_range: Optional[Tuple[float, float, float, float]],
     *,
-    draw_total_time: bool,
+    intervals: Optional[Sequence[Tuple[float, float, str]]] = None,
     draw_projections: bool,
     y_round_digits: int,
 ) -> None:
@@ -289,7 +304,6 @@ def _plot_program_single(
         color_cycle (Sequence[str], optional): Optional colors for lines.
         xy_range (tuple[float, float, float, float] | None): Optional
             explicit (x1, y1, x2, y2) range for this axes.
-        draw_total_time (bool): Whether to draw a total time arrow on top.
         draw_projections (bool): Whether to draw x/y-axis projection lines.
         y_round_digits (int): Decimal digits used for grouping y values.
     """
@@ -317,8 +331,9 @@ def _plot_program_single(
     if draw_projections:
         _draw_projection_lines(ax, sequences, y_round_digits=y_round_digits)
 
-    if draw_total_time:
-        _draw_total_time_arrow(ax)
+    if intervals:
+        _draw_segment_intervals(ax, intervals)
+
 
 
 def _draw_sequences(
@@ -356,7 +371,7 @@ def _draw_projection_lines(
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     x_min_axis, y_min_axis = xlim[0], ylim[0]
-
+    
     # Collect points inside current view to avoid clutter from off-screen data.
     xs: List[float] = []
     ys: List[float] = []
@@ -484,3 +499,59 @@ def _connect_main_and_zoom(
             linewidth=0.8,
         )
         fig.add_artist(line)
+
+def _draw_segment_intervals(
+    ax: Axes,
+    intervals: Sequence[Tuple[float, float, str]],
+) -> None:
+    """Draw internal segment arrows inside the axes.
+
+    Each interval is a tuple (t_start, t_end, label).
+
+    - Arrow is drawn *inside the plot* slightly above x-axis.
+    - Two thin projection lines drop from t_start and t_end down to x-axis.
+    """
+    x_min, x_max = ax.get_xlim()
+    y_min, y_max = ax.get_ylim()
+
+    # Arrow baseline height (10% below top)
+    y_arrow = y_max + 0.1*(y_max - y_min)
+
+    for t_start, t_end, label in intervals:
+        if t_end < t_start:
+            t_start, t_end = t_end, t_start
+
+        # Projection lines to x-axis
+        ax.vlines(
+            x=t_start,
+            ymin=y_min,
+            ymax=y_arrow,
+            colors="gray",
+            linestyles="dotted",
+            linewidth=0.8,
+        )
+        ax.vlines(
+            x=t_end,
+            ymin=y_min,
+            ymax=y_arrow,
+            colors="gray",
+            linestyles="dotted",
+            linewidth=0.8,
+        )
+
+        # Arrow itself
+        ax.annotate(
+            "",
+            xy=(t_start, y_arrow),
+            xytext=(t_end, y_arrow),
+            arrowprops=dict(arrowstyle="<->", linewidth=1.2),
+        )
+
+        # Label
+        ax.text(
+            (t_start + t_end) / 2,
+            y_arrow,
+            label,
+            ha="center",
+            va="bottom",
+        )
