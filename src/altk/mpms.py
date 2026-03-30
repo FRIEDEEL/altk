@@ -31,6 +31,8 @@ def read_mpms_data_to_df(file: str) -> DataFrame:
                 Field (Oe)
                 Temperature (K)
                 Long Moment (emu)
+            Note: name strs of these columns are stored as COL_T, COL_H and COL_M
+                in mpms.py.
 
     Raises:
         FileNotFoundError: File of the given file path is not found.
@@ -67,33 +69,36 @@ def read_mpms_data_to_np(file: str) -> np.ndarray:
     return data
 
 
-def plot_MT(ax: Axes, df: DataFrame, **kwargs):
+def plot_MT(ax: Axes, df: DataFrame, amount: float, *args, **kwargs):
     """Plot magnetization (M) - temperature (T) to given axis with given data.
 
     Args:
         ax (Axes): ax to plot
         df (DataFrame): data to plot
+        amount (float): amount of the material in mol
         **kwargs (Any): the keyword args passed to Axes.plot() in matplotlib
     """
-    ax.plot(df[COL_T], df[COL_M], **kwargs)
+    ax.plot(df[COL_T], df[COL_M]/amount, *args, **kwargs)
     ax.set_xlabel("T (K)")
-    ax.set_ylabel("M (emu)")
+    ax.set_ylabel("M (emu/mol)")
 
 
-def plot_MH(ax: Axes, df: DataFrame, **kwargs):
+def plot_MH(ax: Axes, df: DataFrame, amount: float, *args, **kwargs):
     """Plot magnetization (M) - magnetic field (H) to given axis with given data.
 
     Args:
         ax (Axes): ax to plot
         df (DataFrame): data to plot, provided by read_mpms_data_to_df
+        amount (float): amount of the material in mol.
         **kwargs (Any): the keyword args passed to Axes.plot() in matplotlib
 
     """
-    ax.plot(df[COL_H], df[COL_M], **kwargs)
+    ax.plot(df[COL_H], df[COL_M]/amount, *args, **kwargs)
     ax.set_xlabel("H (Oe)")
-    ax.set_ylabel("M (emu)")
+    ax.set_ylabel("M (emu/mol)")
 
-def calc_dM_dT(data: DataFrame):
+
+def calc_dM_dT(data: DataFrame, smooth = False):
     """calculate the 1st order derivative of dM/dT.
 
     Args:
@@ -101,14 +106,28 @@ def calc_dM_dT(data: DataFrame):
 
     Returns:
         ndarray: the derivative dM/dT
-    """    
+    
+    Note:
+        This function uses numpy.gradient() 
+    """
+    
     M_data = data[COL_M].to_numpy(dtype=np.float128)
     T_data = data[COL_T].to_numpy(dtype=np.float128)
-    derivative: np.ndarray = np.gradient(M_data, T_data)
+    if smooth:
+        from scipy.signal import savgol_filter
+        derivative = savgol_filter(
+            M_data,
+            window_length  = 5,
+            polyorder = 2,
+            deriv = 1,
+
+        )
+    else:
+        derivative: np.ndarray = np.gradient(M_data, T_data)
     return derivative
 
-def plot_dM_dT(ax: Axes, df: DataFrame, **kwargs):
-    dM_dT = calc_dM_dT(data=df)
+def plot_dM_dT(ax: Axes, df: DataFrame, weight: float, **kwargs):
+    dM_dT = calc_dM_dT(data=df, smooth= True)
     T = df[COL_T]
     assert len(T) == len(dM_dT)
     ax.plot(T, dM_dT, **kwargs)
