@@ -9,7 +9,7 @@ from scipy.ndimage import shift
 from scipy.signal import correlate
 from tifffile import imread
 
-from altk.utils.image_display import CropBox, FloatImageArray, ImageArray, ImageSlice, ImageSlices
+from altk.typing.image import CropBox, FloatImageArray, ImageArray, ImageSlices
 
 Offset = tuple[int, int]
 DifferenceMode = Literal["absolute", "relative"]
