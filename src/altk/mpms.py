@@ -1,12 +1,12 @@
 import pandas as pd
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from matplotlib.axes import Axes
 
 import numpy as np
 
 import logging
-from typing import Union, Literal
-
+from typing import Mapping
+from dataclasses import dataclass, field
 from altk.utils._exceptions import DataFileInvalid
 
 logger = logging.getLogger(__name__)
@@ -17,6 +17,53 @@ COL_T = "Temperature (K)"
 COL_H = "Field (Oe)"
 COL_M = "Long Moment (emu)"
 
+@dataclass
+class MpmsData():
+    data: DataFrame
+    sample_mass: float
+    metadata: Mapping[str, str] = field(default_factory=dict)
+    _magnetisation: Series | None = field(default=None, init=False, repr=False)
+
+
+    @property
+    def moment(self) -> Series:
+        return self.data[COL_M]
+    
+    @property
+    def temperature(self) -> Series:
+        return self.data[COL_T]
+
+    @property
+    def magnetic_field(self) -> Series:
+        return self.data[COL_H]
+
+    @property
+    def magnetisation(self):
+        
+        pass
+    
+    # aliases
+    @property
+    def m(self) -> Series:
+        return self.moment
+    
+    @property
+    def T(self):
+        return self.temperature
+    
+    @property
+    def H(self):
+        return self.magnetic_field
+
+    # setting the sample mass. 
+    def set_sample_mass(self, mass: float):
+        pass
+    
+    def _calc_magnetisation(self):
+        pass
+
+def read_mpms_data():
+    pass
 
 def read_mpms_data_to_df(file: str) -> DataFrame:
     """Read .dat datafile from mpms.
@@ -131,3 +178,6 @@ def plot_dM_dT(ax: Axes, df: DataFrame, weight: float, **kwargs):
     T = df[COL_T]
     assert len(T) == len(dM_dT)
     ax.plot(T, dM_dT, **kwargs)
+
+def curie_weiss_fit(low_cut: float):
+    pass
