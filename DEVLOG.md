@@ -3,6 +3,17 @@ Integrate future plan and notes during developing.
 
 
 ## Dated notes
+### 260526-032559
+Add dataclass to structured data, in order to have easier access to the data, as well as containing the metadata within the structured data.
+
+### 260523-052804
+Typing(customized types) should be settled in a submodule typing. (maybe)
+
+### 260523-051031
+Refactoring:
+
+contain the standard flow to workflows.
+the rest of the package is "the reused tools in building the workflows."
 
 ### 251227-143307
 The common data form should be numpy Ndarray.

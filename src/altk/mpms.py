@@ -1,12 +1,14 @@
+from __future__ import annotations
+import csv
 import pandas as pd
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from matplotlib.axes import Axes
 
 import numpy as np
 
 import logging
-from typing import Union, Literal
-
+from typing import Mapping
+from altk.typing.path import DataFile
 from altk.utils._exceptions import DataFileInvalid
 
 logger = logging.getLogger(__name__)
@@ -18,7 +20,123 @@ COL_H = "Field (Oe)"
 COL_M = "Long Moment (emu)"
 
 
-def read_mpms_data_to_df(file: str) -> DataFrame:
+class MpmsData:
+    def __init__(
+        self,
+        data: DataFrame,
+        metadata: Mapping | None = None,
+    ) -> None:
+        self._data = data
+        self._sample_mass = None
+        self._metadata = {} if metadata is None else metadata
+        self._set_sample_mass_from_meta()
+
+    @classmethod
+    def from_file(cls, file: DataFile) -> MpmsData:
+        data = read_mpms_data_to_df(file)
+        metadata = _read_mpms_metadata(file)
+        return cls(data=data, metadata=metadata)
+
+    @property
+    def data(self) -> DataFrame:
+        return self._data
+    
+    @property
+    def metadata(self) -> Mapping:
+        return self._metadata
+
+    @property
+    def moment(self) -> Series:
+        return self.data[COL_M]
+
+    @property
+    def temperature(self) -> Series:
+        return self.data[COL_T]
+
+    @property
+    def magnetic_field(self) -> Series:
+        return self.data[COL_H]
+
+    @property
+    def magnetisation(self) -> Series:
+        return self.m / self.mass
+        
+    @property
+    def susceptibility(self) -> Series:
+        return self.M / self.H
+
+    @property
+    def mass(self) -> float:
+        if self._sample_mass is None or self._sample_mass <=0:
+            raise ValueError(f"Mass has invalid value {self._sample_mass}. Set manually.")
+        else:
+            return self._sample_mass
+
+    @mass.setter
+    def mass(self, value: float):
+        if value <= 0:
+            raise ValueError(f"Assigning illegal mass value: {value}.")
+        self._sample_mass = value
+
+    # aliases
+    @property
+    def m(self) -> Series:
+        """Long moment. Equivalent to `self.moment`
+        """
+        return self.moment
+
+    @property
+    def T(self) -> Series:
+        return self.temperature
+
+    @property
+    def H(self) -> Series:
+        return self.magnetic_field
+
+    @property
+    def M(self) -> Series:
+        return self.magnetisation
+
+    @property
+    def chi(self) -> Series:
+        return self.susceptibility
+
+    # setting the sample mass from meta
+    def _set_sample_mass_from_meta(self) -> None:
+        if "WEIGHT" in self.metadata.keys() and self.metadata["WEIGHT"] is not None:
+            try:
+                sample_mass = float(self.metadata["WEIGHT"])
+                self.mass = sample_mass
+            except ValueError:
+                w = self.metadata["WEIGHT"]
+                logger.warning(
+                    f'Sample weight should be number-like, got "{w}", skipping...'
+                )
+
+def read_mpms_data():
+    pass
+
+
+def _read_mpms_metadata(file: DataFile) -> dict[str, str]:
+    metadata: dict[str, str] = {}
+    with open(file, "r") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if len(row) == 1 and row[0].strip() == "[Data]":
+                break
+            if len(row) < 3 or row[0].strip() != "INFO":
+                continue
+
+            key = row[1].strip()
+            value = ",".join(row[2:]).strip()
+            metadata[key] = value
+        else:
+            raise DataFileInvalid('Data start position "[Data]" not found.')
+
+    return metadata
+
+
+def read_mpms_data_to_df(file: DataFile) -> DataFrame:
     """Read .dat datafile from mpms.
 
     Args:
@@ -58,7 +176,7 @@ def read_mpms_data_to_np(file: str) -> np.ndarray:
 
     Returns:
         np.ndarray: The transposed data in ndarray.
-        
+
         Line assignment as follows
             0: Field, in Oe
             1: Temperature, in K
@@ -78,7 +196,7 @@ def plot_MT(ax: Axes, df: DataFrame, amount: float, *args, **kwargs):
         amount (float): amount of the material in mol
         **kwargs (Any): the keyword args passed to Axes.plot() in matplotlib
     """
-    ax.plot(df[COL_T], df[COL_M]/amount, *args, **kwargs)
+    ax.plot(df[COL_T], df[COL_M] / amount, *args, **kwargs)
     ax.set_xlabel("T (K)")
     ax.set_ylabel("M (emu/mol)")
 
@@ -93,12 +211,12 @@ def plot_MH(ax: Axes, df: DataFrame, amount: float, *args, **kwargs):
         **kwargs (Any): the keyword args passed to Axes.plot() in matplotlib
 
     """
-    ax.plot(df[COL_H], df[COL_M]/amount, *args, **kwargs)
+    ax.plot(df[COL_H], df[COL_M] / amount, *args, **kwargs)
     ax.set_xlabel("H (Oe)")
     ax.set_ylabel("M (emu/mol)")
 
 
-def calc_dM_dT(data: DataFrame, smooth = False):
+def calc_dM_dT(data: DataFrame, smooth=False):
     """calculate the 1st order derivative of dM/dT.
 
     Args:
@@ -106,28 +224,33 @@ def calc_dM_dT(data: DataFrame, smooth = False):
 
     Returns:
         ndarray: the derivative dM/dT
-    
+
     Note:
-        This function uses numpy.gradient() 
+        This function uses numpy.gradient()
     """
-    
+
     M_data = data[COL_M].to_numpy(dtype=np.float128)
     T_data = data[COL_T].to_numpy(dtype=np.float128)
     if smooth:
         from scipy.signal import savgol_filter
+
         derivative = savgol_filter(
             M_data,
-            window_length  = 5,
-            polyorder = 2,
-            deriv = 1,
-
+            window_length=5,
+            polyorder=2,
+            deriv=1,
         )
     else:
         derivative: np.ndarray = np.gradient(M_data, T_data)
     return derivative
 
+
 def plot_dM_dT(ax: Axes, df: DataFrame, weight: float, **kwargs):
-    dM_dT = calc_dM_dT(data=df, smooth= True)
+    dM_dT = calc_dM_dT(data=df, smooth=True)
     T = df[COL_T]
     assert len(T) == len(dM_dT)
     ax.plot(T, dM_dT, **kwargs)
+
+
+def curie_weiss_fit(T_seq: Series, chi_seq: Series, low_cut: float):
+    pass
