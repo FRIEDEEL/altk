@@ -25,13 +25,13 @@ class Sample:
 
     def __init__(
         self, mass: float, molar_mass: float | None = None, formula: str | None = None
-    ):
+    ) -> None:
         self.mass = mass
         self.molar_mass = molar_mass
         self.formula = formula
 
     @property
-    def amount(self):
+    def amount(self) -> float:
         """The amount of substance, in mol."""
         if self.molar_mass is None:
             raise ValueError(
@@ -41,33 +41,33 @@ class Sample:
             return self.mass / self.molar_mass
 
     @property
-    def mass(self):
+    def mass(self) -> float:
         """Weight of the sample, in g."""
         return self._mass
 
     @mass.setter
-    def mass(self, value: float):
+    def mass(self, value: float) -> None:
         if value <= 0:
             raise ValueError(f"Mass should be larger than 0. Got {value}")
         else:
             self._mass = value
 
     @property
-    def formula(self):
+    def formula(self) -> str | None:
         """The chemical formula. e.g. V2O3."""
         return self._formula
 
     @formula.setter
-    def formula(self, value: str | None):
+    def formula(self, value: str | None) -> None:
         self._formula = value  # TODO: validation check
 
     @property
-    def molar_mass(self):
+    def molar_mass(self) -> float | None:
         """Molecular mass of sample, in g/mol."""
         return self._molar_mass
 
     @molar_mass.setter
-    def molar_mass(self, value: float|None):
+    def molar_mass(self, value: float | None) -> None:
         if value is not None and value <= 0:
             raise ValueError(f"Molar mass should be larger than 0. Got {value}")
         else:
@@ -85,7 +85,7 @@ class MpmsData:
         self._metadata = {} if metadata is None else metadata
 
         # sample object setting
-        self._sample = None
+        self._sample: Sample | None = None
         if sample is None:
             logger.info("No sample info passed. Trying to read from mpms data meta...")
             self._set_sample_mass_from_meta()
@@ -107,18 +107,20 @@ class MpmsData:
         return self._metadata
 
     @property
-    def sample(self):
+    def sample(self) -> Sample | None:
         return self._sample
 
     @sample.setter
-    def sample(self, value: Sample | None):
+    def sample(self, value: Sample | None) -> None:
         self._sample = value
-    
-    def _require_sample(self):
-        if self.sample is None:
-            raise ValueError("Sample info is required for current calculation/attribute.")
+
+    def _require_sample(self) -> Sample:
+        if self._sample is None:
+            raise ValueError(
+                "Sample info is required for current calculation/attribute."
+            )
         else:
-            return self.sample
+            return self._sample
 
     @property
     def moment(self) -> Series:
@@ -137,7 +139,7 @@ class MpmsData:
         return self.m / self.mass
 
     @property
-    def molar_magnetisation(self):
+    def molar_magnetisation(self) -> Series:
         return self.m / self.amount
 
     @property
@@ -154,14 +156,14 @@ class MpmsData:
         return self._require_sample().mass
 
     @mass.setter
-    def mass(self, value: float):
+    def mass(self, value: float) -> None:
         if self._sample is None:
             self._sample = Sample(value)
         else:
             self._sample.mass = value
 
     @property
-    def amount(self):
+    def amount(self) -> float:
         """The amount of sample. in mol."""
         return self._require_sample().amount
 
