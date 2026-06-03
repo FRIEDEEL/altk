@@ -11,6 +11,7 @@ dependencies = [
     { name = "mplfonts" },
     { name = "numpy" },
     { name = "pandas" },
+    { name = "pytest" },
     { name = "scipy" },
     { name = "tifffile" },
 ]
@@ -26,6 +27,7 @@ requires-dist = [
     { name = "mplfonts", specifier = ">=0.0.10" },
     { name = "numpy", specifier = ">=2.3.5" },
     { name = "pandas", specifier = ">=2.3.3" },
+    { name = "pytest", specifier = ">=9.0.1" },
     { name = "scipy", specifier = ">=1.16.3" },
     { name = "tifffile", specifier = ">=2026.5.15" },
 ]
