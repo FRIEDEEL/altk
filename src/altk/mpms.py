@@ -10,7 +10,6 @@ import logging
 from typing import Mapping
 from altk.typing.path import DataFile
 from altk.utils._exceptions import DataFileInvalid
-from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +27,8 @@ class Sample:
         self, mass: float, molar_mass: float | None = None, formula: str | None = None
     ):
         self.mass = mass
-        if molar_mass is not None:
-            self.molar_mass = molar_mass
-        if formula is not None:
-            self.formula = formula
+        self.molar_mass = molar_mass
+        self.formula = formula
 
     @property
     def amount(self):
@@ -47,8 +44,9 @@ class Sample:
     def mass(self):
         """Weight of the sample, in g."""
         return self._mass
+
     @mass.setter
-    def mass(self, value:float):
+    def mass(self, value: float):
         if value <= 0:
             raise ValueError(f"Mass should be larger than 0. Got {value}")
         else:
@@ -58,9 +56,10 @@ class Sample:
     def formula(self):
         """The chemical formula. e.g. V2O3."""
         return self._formula
+
     @formula.setter
-    def formula(self, value:str):
-        self._formula = value #TODO: validation check
+    def formula(self, value: str | None):
+        self._formula = value  # TODO: validation check
 
     @property
     def molar_mass(self):
@@ -68,8 +67,8 @@ class Sample:
         return self._molar_mass
 
     @molar_mass.setter
-    def molar_mass(self, value:float):
-        if value <= 0:
+    def molar_mass(self, value: float|None):
+        if value is not None and value <= 0:
             raise ValueError(f"Molar mass should be larger than 0. Got {value}")
         else:
             self._molar_mass = value
@@ -109,13 +108,17 @@ class MpmsData:
 
     @property
     def sample(self):
-        if self._sample is None:
-            raise ValueError("Sample is not set.")
         return self._sample
 
     @sample.setter
-    def sample(self, value: Sample):
+    def sample(self, value: Sample | None):
         self._sample = value
+    
+    def _require_sample(self):
+        if self.sample is None:
+            raise ValueError("Sample info is required for current calculation/attribute.")
+        else:
+            return self.sample
 
     @property
     def moment(self) -> Series:
@@ -148,7 +151,7 @@ class MpmsData:
         Raises:
             ValueError: When a illegal value is passed. e.g. less than 0.
         """
-        return self.sample.mass
+        return self._require_sample().mass
 
     @mass.setter
     def mass(self, value: float):
@@ -157,10 +160,10 @@ class MpmsData:
         else:
             self._sample.mass = value
 
-
     @property
     def amount(self):
-        return self.sample.amount
+        """The amount of sample. in mol."""
+        return self._require_sample().amount
 
     # aliases
     @property
