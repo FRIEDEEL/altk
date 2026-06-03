@@ -10,6 +10,7 @@ import logging
 from typing import Mapping
 from altk.typing.path import DataFile
 from altk.utils._exceptions import DataFileInvalid
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -20,16 +21,77 @@ COL_H = "Field (Oe)"
 COL_M = "Long Moment (emu)"
 
 
+class Sample:
+    """Sample information class."""
+
+    def __init__(
+        self, mass: float, molar_mass: float | None = None, formula: str | None = None
+    ):
+        self.mass = mass
+        if molar_mass is not None:
+            self.molar_mass = molar_mass
+        if formula is not None:
+            self.formula = formula
+
+    @property
+    def amount(self):
+        """The amount of substance, in mol."""
+        if self.molar_mass is None:
+            raise ValueError(
+                "Empty molar mass. Please set with molar_mass property, or set the formula."
+            )
+        else:
+            return self.mass / self.molar_mass
+
+    @property
+    def mass(self):
+        """Weight of the sample, in g."""
+        return self._mass
+    @mass.setter
+    def mass(self, value:float):
+        if value <= 0:
+            raise ValueError(f"Mass should be larger than 0. Got {value}")
+        else:
+            self._mass = value
+
+    @property
+    def formula(self):
+        """The chemical formula. e.g. V2O3."""
+        return self._formula
+    @formula.setter
+    def formula(self, value:str):
+        self._formula = value #TODO: validation check
+
+    @property
+    def molar_mass(self):
+        """Molecular mass of sample, in g/mol."""
+        return self._molar_mass
+
+    @molar_mass.setter
+    def molar_mass(self, value:float):
+        if value <= 0:
+            raise ValueError(f"Molar mass should be larger than 0. Got {value}")
+        else:
+            self._molar_mass = value
+
+
 class MpmsData:
     def __init__(
         self,
         data: DataFrame,
         metadata: Mapping | None = None,
+        sample: Sample | None = None,
     ) -> None:
         self._data = data
-        self._sample_mass = None
         self._metadata = {} if metadata is None else metadata
-        self._set_sample_mass_from_meta()
+
+        # sample object setting
+        self._sample = None
+        if sample is None:
+            logger.info("No sample info passed. Trying to read from mpms data meta...")
+            self._set_sample_mass_from_meta()
+        else:
+            self._sample = sample
 
     @classmethod
     def from_file(cls, file: DataFile) -> MpmsData:
@@ -40,10 +102,20 @@ class MpmsData:
     @property
     def data(self) -> DataFrame:
         return self._data
-    
+
     @property
     def metadata(self) -> Mapping:
         return self._metadata
+
+    @property
+    def sample(self):
+        if self._sample is None:
+            raise ValueError("Sample is not set.")
+        return self._sample
+
+    @sample.setter
+    def sample(self, value: Sample):
+        self._sample = value
 
     @property
     def moment(self) -> Series:
@@ -60,29 +132,40 @@ class MpmsData:
     @property
     def magnetisation(self) -> Series:
         return self.m / self.mass
-        
+
+    @property
+    def molar_magnetisation(self):
+        return self.m / self.amount
+
     @property
     def susceptibility(self) -> Series:
         return self.M / self.H
 
     @property
     def mass(self) -> float:
-        if self._sample_mass is None or self._sample_mass <=0:
-            raise ValueError(f"Mass has invalid value {self._sample_mass}. Set manually.")
-        else:
-            return self._sample_mass
+        """Mass of sample, in g.
+
+        Raises:
+            ValueError: When a illegal value is passed. e.g. less than 0.
+        """
+        return self.sample.mass
 
     @mass.setter
     def mass(self, value: float):
-        if value <= 0:
-            raise ValueError(f"Assigning illegal mass value: {value}.")
-        self._sample_mass = value
+        if self._sample is None:
+            self._sample = Sample(value)
+        else:
+            self._sample.mass = value
+
+
+    @property
+    def amount(self):
+        return self.sample.amount
 
     # aliases
     @property
     def m(self) -> Series:
-        """Long moment. Equivalent to `self.moment`
-        """
+        """Long moment. Equivalent to `self.moment`"""
         return self.moment
 
     @property
@@ -112,6 +195,7 @@ class MpmsData:
                 logger.warning(
                     f'Sample weight should be number-like, got "{w}", skipping...'
                 )
+
 
 def read_mpms_data():
     pass
@@ -236,10 +320,10 @@ def calc_dM_dT(data: DataFrame, smooth=False):
 
         derivative = savgol_filter(
             M_data,
-            window_length=5,
+            window_length=7,
             polyorder=2,
             deriv=1,
-        )
+        )  # type: ignore
     else:
         derivative: np.ndarray = np.gradient(M_data, T_data)
     return derivative
@@ -253,4 +337,5 @@ def plot_dM_dT(ax: Axes, df: DataFrame, weight: float, **kwargs):
 
 
 def curie_weiss_fit(T_seq: Series, chi_seq: Series, low_cut: float):
-    pass
+    T = T_seq.to_numpy(dtype=np.float64)
+    chi = chi_seq.to_numpy(dtype=np.float64)
