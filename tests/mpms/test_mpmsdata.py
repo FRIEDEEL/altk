@@ -79,3 +79,34 @@ def test_mpms_data_calculates_molar_magnetisation_from_sample(
         expected,
         check_names=False,
     )
+
+
+def test_mpms_data_calculates_molar_susceptibility_from_sample(
+    mpms_df: pd.DataFrame,
+) -> None:
+    data = MpmsData(mpms_df, sample=Sample(mass=2.0, molar_mass=100.0))
+
+    expected = pd.Series([1.0, 1.0])
+
+    pd.testing.assert_series_equal(
+        data.molar_susceptibility,
+        expected,
+        check_names=False,
+    )
+
+
+def test_mpms_data_molar_aliases_match_molar_quantities(
+    mpms_df: pd.DataFrame,
+) -> None:
+    data = MpmsData(mpms_df, sample=Sample(mass=2.0, molar_mass=100.0))
+
+    pd.testing.assert_series_equal(
+        data.M_mol,
+        data.molar_magnetisation,
+        check_names=False,
+    )
+    pd.testing.assert_series_equal(
+        data.chi_mol,
+        data.molar_susceptibility,
+        check_names=False,
+    )

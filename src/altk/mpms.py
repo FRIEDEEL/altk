@@ -147,6 +147,10 @@ class MpmsData:
         return self.M / self.H
 
     @property
+    def molar_susceptibility(self) -> Series:
+        return self.molar_magnetisation / self.H
+
+    @property
     def mass(self) -> float:
         """Mass of sample, in g.
 
@@ -186,8 +190,16 @@ class MpmsData:
         return self.magnetisation
 
     @property
+    def M_mol(self) -> Series:
+        return self.molar_magnetisation
+
+    @property
     def chi(self) -> Series:
         return self.susceptibility
+
+    @property
+    def chi_mol(self) -> Series:
+        return self.molar_susceptibility
 
     # setting the sample mass from meta
     def _set_sample_mass_from_meta(self) -> None:
