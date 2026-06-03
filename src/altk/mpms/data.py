@@ -351,8 +351,3 @@ def plot_dM_dT(ax: Axes, df: DataFrame, weight: float, **kwargs):
     T = df[COL_T]
     assert len(T) == len(dM_dT)
     ax.plot(T, dM_dT, **kwargs)
-
-
-def curie_weiss_fit(T_seq: Series, chi_seq: Series, low_cut: float):
-    T = T_seq.to_numpy(dtype=np.float64)
-    chi = chi_seq.to_numpy(dtype=np.float64)
