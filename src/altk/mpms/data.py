@@ -7,7 +7,7 @@ from matplotlib.axes import Axes
 import numpy as np
 
 import logging
-from typing import Mapping
+from typing import Mapping, Self
 from altk.typing.path import DataFile
 from altk.utils._exceptions import DataFileInvalid
 
@@ -24,7 +24,10 @@ class Sample:
     """Sample information class."""
 
     def __init__(
-        self, mass: float, molar_mass: float | None = None, formula: str | None = None
+        self,
+        mass: float | None = None,
+        molar_mass: float | None = None,
+        formula: str | None = None,
     ) -> None:
         self.mass = mass
         self.molar_mass = molar_mass
@@ -33,21 +36,18 @@ class Sample:
     @property
     def amount(self) -> float:
         """The amount of substance, in mol."""
-        if self.molar_mass is None:
-            raise ValueError(
-                "Empty molar mass. Please set with molar_mass property, or set the formula."
-            )
-        else:
-            return self.mass / self.molar_mass
+        return self.mass / self.molar_mass
 
     @property
     def mass(self) -> float:
         """Weight of the sample, in g."""
+        if self._mass is None:
+            raise ValueError("Empty mass. Please set value with mass property.")
         return self._mass
 
     @mass.setter
-    def mass(self, value: float) -> None:
-        if value <= 0:
+    def mass(self, value: float | None) -> None:
+        if value is not None and value <= 0:
             raise ValueError(f"Mass should be larger than 0. Got {value}")
         else:
             self._mass = value
@@ -62,8 +62,12 @@ class Sample:
         self._formula = value  # TODO: validation check
 
     @property
-    def molar_mass(self) -> float | None:
+    def molar_mass(self) -> float:
         """Molecular mass of sample, in g/mol."""
+        if self._molar_mass is None:
+            raise ValueError(
+                "Empty molar mass. Please set value with molar_mass property."
+            )
         return self._molar_mass
 
     @molar_mass.setter
@@ -113,6 +117,10 @@ class MpmsData:
     @sample.setter
     def sample(self, value: Sample | None) -> None:
         self._sample = value
+
+    def set_sample(self, sample: Sample) -> Self:
+        self.sample = sample
+        return self
 
     def _require_sample(self) -> Sample:
         if self._sample is None:
