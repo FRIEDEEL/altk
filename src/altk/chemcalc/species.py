@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+import periodictable as pt
+
 
 @dataclass(frozen=True)
 class Species:
@@ -89,4 +91,17 @@ def calc_molar_mass(composition: dict[str, float]) -> float:
     Returns:
         float: Molar mass in g/mol.
     """
-    raise NotImplementedError("Molar mass backend is not implemented yet.")
+    if not composition:
+        raise ValueError("Composition must not be empty.")
+
+    molar_mass = 0.0
+    for symbol, count in composition.items():
+        if count <= 0:
+            raise ValueError(f"Element count must be positive for {symbol}: {count}")
+        try:
+            element = pt.elements.symbol(symbol)
+        except ValueError as error:
+            raise ValueError(f"Unknown element symbol: {symbol}") from error
+        molar_mass += element.mass * count
+
+    return molar_mass
