@@ -1,10 +1,10 @@
-from altk.chemcalc.chemcalc import (
+from altk.chemcalc.reaction import (
     Constraint,
     ConstraintOperator,
     ConstraintUnit,
     Reaction,
-    Species,
 )
+from altk.chemcalc.species import Species, calc_molar_mass, parse_formula
 
 __all__ = [
     "Constraint",
@@ -12,4 +12,6 @@ __all__ = [
     "ConstraintUnit",
     "Reaction",
     "Species",
+    "calc_molar_mass",
+    "parse_formula",
 ]
