@@ -76,12 +76,8 @@ class Reaction:
         if not self.products:
             raise ValueError("Reaction must contain at least one product.")
 
-        for species in self.species:
-            self._coeffs.setdefault(species.formula, 1)
-            if self._coeffs[species.formula] <= 0:
-                raise ValueError(
-                    f"Reaction coefficient must be positive for {species.formula}."
-                )
+        self._set_default_coefficients()
+        self._validate_coefficients(self._coeffs)
 
     @property
     def coeffs(self) -> dict[str, int]:
@@ -94,6 +90,22 @@ class Reaction:
             dict[str, int]: Coefficient mapping copy.
         """
         return self._coeffs.copy()
+
+    @coeffs.setter
+    def coeffs(self, value: dict[str, int]) -> None:
+        """Set stoichiometric coefficients and invalidate balance cache.
+
+        Args:
+            value (dict[str, int]): New coefficient mapping.
+
+        Returns:
+            None: Coefficients are updated in place.
+        """
+        coeffs = dict(value)
+        self._set_default_coefficients(coeffs)
+        self._validate_coefficients(coeffs)
+        self._coeffs = coeffs
+        self._is_balanced = False
 
     @property
     def species(self) -> tuple[Species, ...]:
@@ -201,7 +213,7 @@ class Reaction:
         formula = species.formula if isinstance(species, Species) else species
         return self._coeffs[formula]
 
-    def set_coefficient(self, species: Species | str, coefficient: int) -> None:
+    def set_coefficient(self, species: Species | str, coefficient: int) -> Self:
         """Set a coefficient for a species.
 
         Args:
@@ -209,9 +221,41 @@ class Reaction:
             coefficient (int): New stoichiometric coefficient.
 
         Returns:
-            None: This method is reserved for later explicit coefficient editing.
+            None: The coefficient is updated in place.
         """
-        raise NotImplementedError("Manual coefficient setting is not implemented yet.")
+        formula = species.formula if isinstance(species, Species) else species
+        coeffs = self.coeffs
+        coeffs[formula] = coefficient
+        self.coeffs = coeffs
+        return self
+
+    def _set_default_coefficients(self, coeffs: dict[str, int] | None = None) -> None:
+        """Set default coefficient of 1 for missing species.
+
+        Args:
+            coeffs (dict[str, int] | None): Optional coefficient mapping to update.
+
+        Returns:
+            None: Missing coefficients are filled in place.
+        """
+        target = self._coeffs if coeffs is None else coeffs
+        for species in self.species:
+            target.setdefault(species.formula, 1)
+
+    def _validate_coefficients(self, coeffs: dict[str, int]) -> None:
+        """Validate coefficient values for reaction species.
+
+        Args:
+            coeffs (dict[str, int]): Coefficient mapping to validate.
+
+        Returns:
+            None: Raises if a coefficient is invalid.
+        """
+        for species in self.species:
+            if coeffs[species.formula] <= 0:
+                raise ValueError(
+                    f"Reaction coefficient must be positive for {species.formula}."
+                )
 
     def _check_balance(self) -> bool:
         """Check whether current coefficients conserve all elements.
