@@ -79,6 +79,21 @@ class Reaction:
         self._set_default_coefficients()
         self._validate_coefficients(self._coeffs)
 
+    def __str__(self) -> str:
+        """Format the reaction with current coefficients.
+
+        Args:
+            None: This method uses stored species and coefficients.
+
+        Returns:
+            str: Human-readable reaction expression.
+        """
+        return (
+            f"{self._format_reaction_side(self.reactants)} "
+            f"{ReactionArrow} "
+            f"{self._format_reaction_side(self.products)}"
+        )
+
     @property
     def coeffs(self) -> dict[str, int]:
         """Stoichiometric coefficients keyed by formula.
@@ -221,13 +236,38 @@ class Reaction:
             coefficient (int): New stoichiometric coefficient.
 
         Returns:
-            None: The coefficient is updated in place.
+            Self: This reaction after in-place coefficient update.
         """
         formula = species.formula if isinstance(species, Species) else species
         coeffs = self.coeffs
         coeffs[formula] = coefficient
         self.coeffs = coeffs
         return self
+
+    def _format_reaction_side(self, species_list: tuple[Species, ...]) -> str:
+        """Format one side of the reaction.
+
+        Args:
+            species_list (tuple[Species, ...]): Species on one reaction side.
+
+        Returns:
+            str: Formatted reaction side.
+        """
+        return " + ".join(self._format_species(species) for species in species_list)
+
+    def _format_species(self, species: Species) -> str:
+        """Format one species with its coefficient.
+
+        Args:
+            species (Species): Species to format.
+
+        Returns:
+            str: Formatted species term.
+        """
+        coefficient = self.coefficient(species)
+        if coefficient == 1:
+            return species.formula
+        return f"{coefficient} {species.formula}"
 
     def _set_default_coefficients(self, coeffs: dict[str, int] | None = None) -> None:
         """Set default coefficient of 1 for missing species.
