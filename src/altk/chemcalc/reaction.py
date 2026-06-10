@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
-from typing import Literal, Sequence
+from dataclasses import dataclass
+from typing import Literal, Self, Sequence
+
+from chempy import balance_stoichiometry
 
 from altk.chemcalc.species import Species
 
@@ -44,37 +46,54 @@ class Constraint:
             raise ValueError(f"Constraint value must be positive. Got {self.value}")
 
 
-@dataclass(frozen=True)
 class Reaction:
     """Structured chemical reaction.
 
     Args:
         reactants (tuple[Species, ...]): Reactant species.
         products (tuple[Species, ...]): Product species.
-        coeffs (dict[str, int]): Stoichiometric coefficients keyed by formula.
+        coeffs (dict[str, int] | None): Stoichiometric coefficients keyed by formula.
+        _is_balanced (bool): Cached balance state.
 
     Returns:
-        None: This dataclass stores validated reaction data.
+        None: This class stores validated reaction data.
     """
 
-    reactants: tuple[Species, ...]
-    products: tuple[Species, ...]
-    coeffs: dict[str, int] = field(default_factory=dict)
+    def __init__(
+        self,
+        reactants: tuple[Species, ...],
+        products: tuple[Species, ...],
+        coeffs: dict[str, int] | None = None,
+        _is_balanced: bool = False,
+    ) -> None:
+        self.reactants = reactants
+        self.products = products
+        self._coeffs = {} if coeffs is None else dict(coeffs)
+        self._is_balanced = _is_balanced
 
-    def __post_init__(self) -> None:
         if not self.reactants:
             raise ValueError("Reaction must contain at least one reactant.")
         if not self.products:
             raise ValueError("Reaction must contain at least one product.")
 
-        coeffs = dict(self.coeffs)
         for species in self.species:
-            coeffs.setdefault(species.formula, 1)
-            if coeffs[species.formula] <= 0:
+            self._coeffs.setdefault(species.formula, 1)
+            if self._coeffs[species.formula] <= 0:
                 raise ValueError(
                     f"Reaction coefficient must be positive for {species.formula}."
                 )
-        object.__setattr__(self, "coeffs", coeffs)
+
+    @property
+    def coeffs(self) -> dict[str, int]:
+        """Stoichiometric coefficients keyed by formula.
+
+        Args:
+            None: This property returns a copy of the stored coefficients.
+
+        Returns:
+            dict[str, int]: Coefficient mapping copy.
+        """
+        return self._coeffs.copy()
 
     @property
     def species(self) -> tuple[Species, ...]:
@@ -110,16 +129,54 @@ class Reaction:
             coeffs=reactant_coeffs | product_coeffs,
         )
 
-    def balance(self) -> Reaction:
+    def is_balanced(self) -> bool:
+        """Return whether this reaction is balanced.
+
+        Args:
+            None: This method checks atom balance when no cached result exists.
+
+        Returns:
+            bool: True if this reaction is balanced.
+        """
+        if self._is_balanced:
+            return True
+
+        if self._check_balance():
+            self._is_balanced = True
+            return True
+
+        return False
+
+    def balance(self) -> Self:
         """Balance the reaction.
 
         Args:
             None: This method uses the stored reaction species.
 
         Returns:
-            Reaction: Balanced reaction.
+            Self: This reaction after in-place coefficient update.
         """
-        raise NotImplementedError("Reaction balancing is not implemented yet.")
+        reactant_formulas = {species.formula for species in self.reactants}
+        product_formulas = {species.formula for species in self.products}
+        reactant_coeffs, product_coeffs = balance_stoichiometry(
+            reactant_formulas,
+            product_formulas,
+        )
+
+        coeffs = {
+            species.formula: int(reactant_coeffs[species.formula])
+            for species in self.reactants
+        }
+        coeffs.update(
+            {
+                species.formula: int(product_coeffs[species.formula])
+                for species in self.products
+            }
+        )
+
+        self._coeffs = coeffs
+        self._is_balanced = True
+        return self
 
     def calculate(self, constraints: Sequence[Constraint]) -> None:
         """Calculate structured reaction quantities from constraints.
@@ -142,7 +199,57 @@ class Reaction:
             int: Stoichiometric coefficient.
         """
         formula = species.formula if isinstance(species, Species) else species
-        return self.coeffs[formula]
+        return self._coeffs[formula]
+
+    def set_coefficient(self, species: Species | str, coefficient: int) -> None:
+        """Set a coefficient for a species.
+
+        Args:
+            species (Species | str): Species object or formula string.
+            coefficient (int): New stoichiometric coefficient.
+
+        Returns:
+            None: This method is reserved for later explicit coefficient editing.
+        """
+        raise NotImplementedError("Manual coefficient setting is not implemented yet.")
+
+    def _check_balance(self) -> bool:
+        """Check whether current coefficients conserve all elements.
+
+        Args:
+            None: This method uses the stored species and coefficients.
+
+        Returns:
+            bool: True if reactant and product element totals match.
+        """
+        reactant_composition = self._side_composition(self.reactants)
+        product_composition = self._side_composition(self.products)
+
+        if reactant_composition.keys() != product_composition.keys():
+            return False
+
+        return all(
+            abs(reactant_composition[element] - product_composition[element]) <= 1e-12
+            for element in reactant_composition
+        )
+
+    def _side_composition(self, species_list: tuple[Species, ...]) -> dict[str, float]:
+        """Calculate total element composition for one reaction side.
+
+        Args:
+            species_list (tuple[Species, ...]): Species on one reaction side.
+
+        Returns:
+            dict[str, float]: Element totals weighted by coefficients.
+        """
+        composition: dict[str, float] = {}
+        for species in species_list:
+            coefficient = self.coefficient(species)
+            for element, count in species.composition.items():
+                composition[element] = composition.get(element, 0.0) + (
+                    coefficient * count
+                )
+        return composition
 
 
 def _parse_reaction_side(text: str) -> tuple[tuple[Species, ...], dict[str, int]]:
