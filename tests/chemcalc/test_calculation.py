@@ -44,6 +44,29 @@ def test_calculate_reaction_with_mass_constraints() -> None:
     assert not vo2.is_limiting
 
 
+def test_reaction_result_str_formats_text_table() -> None:
+    reaction = Reaction.from_string("V2O5 + V2O3 -> VO2").balance()
+    result = reaction.calculate(
+        [
+            Constraint("V2O5", "<=", 10.0, "g"),
+            Constraint("V2O3", "<=", 5.0, "g"),
+        ]
+    )
+
+    text = str(result)
+
+    assert text.splitlines()[0] == "V2O5 + V2O3 -> 4 VO2"
+    assert "V2O5" in text
+    assert "V2O3" in text
+    assert "VO2" in text
+    assert "constraint" in text
+    assert "<=10g" in text
+    assert "<=5g" in text
+    assert "molar mass/g/mol" in text
+    assert "amount/mol" in text
+    assert "mass/g" in text
+
+
 def test_reaction_calculate_delegates_to_calculate_reaction() -> None:
     reaction = Reaction.from_string("H2 + O2 -> H2O").balance()
 
