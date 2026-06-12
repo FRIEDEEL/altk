@@ -12,6 +12,29 @@ def test_constraint_accepts_supported_units_and_operators() -> None:
     assert constraint.unit == "g"
 
 
+def test_constraint_from_string_parses_mass_constraint() -> None:
+    constraint = Constraint.from_string("Ga2O3 <= 10g")
+
+    assert constraint == Constraint("Ga2O3", "<=", 10.0, "g")
+
+
+def test_constraint_from_string_parses_spaces_and_mol_unit() -> None:
+    constraint = Constraint.from_string(" V2O5 <= 0.25 mol ")
+
+    assert constraint == Constraint("V2O5", "<=", 0.25, "mol")
+
+
+def test_constraint_from_string_parses_equal_operator() -> None:
+    constraint = Constraint.from_string("H2 = 2mol")
+
+    assert constraint == Constraint("H2", "=", 2.0, "mol")
+
+
+def test_constraint_from_string_rejects_invalid_expression() -> None:
+    with pytest.raises(ValueError, match="Invalid constraint expression"):
+        Constraint.from_string("Ga2O3 <= ten g")
+
+
 def test_constraint_rejects_empty_species() -> None:
     with pytest.raises(ValueError, match="must not be empty"):
         Constraint("", "<=", 10.0, "g")
