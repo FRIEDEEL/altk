@@ -1,3 +1,9 @@
+from altk.chemcalc.calculation import (
+    ReactionResult,
+    SpeciesCalculation,
+    SpeciesRole,
+    calculate_reaction,
+)
 from altk.chemcalc.reaction import (
     Constraint,
     ConstraintOperator,
@@ -11,7 +17,11 @@ __all__ = [
     "ConstraintOperator",
     "ConstraintUnit",
     "Reaction",
+    "ReactionResult",
     "Species",
+    "SpeciesCalculation",
+    "SpeciesRole",
     "calc_molar_mass",
+    "calculate_reaction",
     "parse_formula",
 ]

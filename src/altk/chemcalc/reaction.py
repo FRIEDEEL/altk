@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Literal, Self, Sequence
+from typing import TYPE_CHECKING, Literal, Self, Sequence
 
 from chempy import balance_stoichiometry
 
 from altk.chemcalc.species import Species
+
+if TYPE_CHECKING:
+    from altk.chemcalc.calculation import ReactionResult
 
 ConstraintOperator = Literal["=", "<="]
 ConstraintUnit = Literal["g", "mol"]
@@ -205,16 +208,18 @@ class Reaction:
         self._is_balanced = True
         return self
 
-    def calculate(self, constraints: Sequence[Constraint]) -> None:
+    def calculate(self, constraints: Sequence[Constraint]) -> ReactionResult:
         """Calculate structured reaction quantities from constraints.
 
         Args:
             constraints (Sequence[Constraint]): Quantitative constraints.
 
         Returns:
-            None: Calculation result type is not implemented yet.
+            ReactionResult: Structured calculation result.
         """
-        raise NotImplementedError("Reaction calculation is not implemented yet.")
+        from altk.chemcalc.calculation import calculate_reaction
+
+        return calculate_reaction(self, constraints)
 
     def coefficient(self, species: Species | str) -> int:
         """Return the coefficient for a species.
