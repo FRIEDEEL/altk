@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Literal, Self, Sequence
+from typing import TYPE_CHECKING, Literal, Self, Sequence
 
 from chempy import balance_stoichiometry
 
 from altk.chemcalc.species import Species
+
+if TYPE_CHECKING:
+    from altk.chemcalc.calculation import ReactionResult
 
 ConstraintOperator = Literal["=", "<="]
 ConstraintUnit = Literal["g", "mol"]
@@ -44,6 +47,37 @@ class Constraint:
             raise ValueError(f"Unsupported constraint unit: {self.unit}")
         if self.value <= 0:
             raise ValueError(f"Constraint value must be positive. Got {self.value}")
+
+    @classmethod
+    def from_string(cls, text: str) -> Constraint:
+        """Build a constraint from a plain expression.
+
+        Args:
+            text (str): Constraint expression such as ``Ga2O3 <= 10g``.
+
+        Returns:
+            Constraint: Parsed constraint object.
+        """
+        pattern = re.compile(
+            r"^\s*"
+            r"(?P<species>[A-Za-z][A-Za-z0-9.]*)"
+            r"\s*(?P<operator><=|=)\s*"
+            r"(?P<value>\d+(?:\.\d+)?)"
+            r"\s*(?P<unit>mol|g)"
+            r"\s*$"
+        )
+        match = pattern.fullmatch(text)
+        if match is None:
+            raise ValueError(f"Invalid constraint expression: {text}")
+
+        operator = match.group("operator")
+        unit = match.group("unit")
+        return cls(
+            species=match.group("species"),
+            operator=operator,  # type: ignore[arg-type]
+            value=float(match.group("value")),
+            unit=unit,  # type: ignore[arg-type]
+        )
 
 
 class Reaction:
@@ -205,16 +239,18 @@ class Reaction:
         self._is_balanced = True
         return self
 
-    def calculate(self, constraints: Sequence[Constraint]) -> None:
+    def calculate(self, constraints: Sequence[Constraint]) -> ReactionResult:
         """Calculate structured reaction quantities from constraints.
 
         Args:
             constraints (Sequence[Constraint]): Quantitative constraints.
 
         Returns:
-            None: Calculation result type is not implemented yet.
+            ReactionResult: Structured calculation result.
         """
-        raise NotImplementedError("Reaction calculation is not implemented yet.")
+        from altk.chemcalc.calculation import calculate_reaction
+
+        return calculate_reaction(self, constraints)
 
     def coefficient(self, species: Species | str) -> int:
         """Return the coefficient for a species.
