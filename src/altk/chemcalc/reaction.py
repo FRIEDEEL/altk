@@ -48,6 +48,37 @@ class Constraint:
         if self.value <= 0:
             raise ValueError(f"Constraint value must be positive. Got {self.value}")
 
+    @classmethod
+    def from_string(cls, text: str) -> Constraint:
+        """Build a constraint from a plain expression.
+
+        Args:
+            text (str): Constraint expression such as ``Ga2O3 <= 10g``.
+
+        Returns:
+            Constraint: Parsed constraint object.
+        """
+        pattern = re.compile(
+            r"^\s*"
+            r"(?P<species>[A-Za-z][A-Za-z0-9.]*)"
+            r"\s*(?P<operator><=|=)\s*"
+            r"(?P<value>\d+(?:\.\d+)?)"
+            r"\s*(?P<unit>mol|g)"
+            r"\s*$"
+        )
+        match = pattern.fullmatch(text)
+        if match is None:
+            raise ValueError(f"Invalid constraint expression: {text}")
+
+        operator = match.group("operator")
+        unit = match.group("unit")
+        return cls(
+            species=match.group("species"),
+            operator=operator,  # type: ignore[arg-type]
+            value=float(match.group("value")),
+            unit=unit,  # type: ignore[arg-type]
+        )
+
 
 class Reaction:
     """Structured chemical reaction.
