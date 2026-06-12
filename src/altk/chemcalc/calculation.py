@@ -60,6 +60,78 @@ class ReactionResult:
     extent: float
     species: dict[str, SpeciesCalculation]
 
+    def __str__(self) -> str:
+        """Format calculation result as an aligned text table.
+
+        Args:
+            None: This method uses stored reaction and species results.
+
+        Returns:
+            str: Aligned text table.
+        """
+        ordered_species = self.reaction.species
+        rows = [
+            (
+                "constraint",
+                [
+                    _format_constraint_cell(self.species[species.formula])
+                    for species in ordered_species
+                ],
+            ),
+            (
+                "molar mass/g/mol",
+                [
+                    _format_number(self.species[species.formula].molar_mass)
+                    for species in ordered_species
+                ],
+            ),
+            (
+                "amount/mol",
+                [
+                    _format_number(self.species[species.formula].amount)
+                    for species in ordered_species
+                ],
+            ),
+            (
+                "mass/g",
+                [
+                    _format_number(self.species[species.formula].mass)
+                    for species in ordered_species
+                ],
+            ),
+        ]
+
+        column_headers = [species.formula for species in ordered_species]
+        label_width = max(len(label) for label, _ in rows)
+        column_widths = [
+            max(
+                len(column_headers[index]),
+                *(len(row_values[index]) for _, row_values in rows),
+            )
+            for index in range(len(column_headers))
+        ]
+
+        lines = [str(self.reaction)]
+        lines.append(
+            " " * label_width
+            + "  "
+            + "  ".join(
+                header.rjust(column_widths[index])
+                for index, header in enumerate(column_headers)
+            )
+        )
+        for label, row_values in rows:
+            lines.append(
+                label.ljust(label_width)
+                + "  "
+                + "  ".join(
+                    value.rjust(column_widths[index])
+                    for index, value in enumerate(row_values)
+                )
+            )
+
+        return "\n".join(lines)
+
 
 def calculate_reaction(
     reaction: Reaction,
@@ -121,6 +193,32 @@ def calculate_reaction(
         extent=extent,
         species=species_results,
     )
+
+
+def _format_constraint_cell(result: SpeciesCalculation) -> str:
+    """Format constraint cell for the text table.
+
+    Args:
+        result (SpeciesCalculation): Species calculation result.
+
+    Returns:
+        str: Formatted constraint cell.
+    """
+    if result.available_mass is None:
+        return "-"
+    return f"<={_format_number(result.available_mass)}g"
+
+
+def _format_number(value: float) -> str:
+    """Format a float for compact tabular output.
+
+    Args:
+        value (float): Number to format.
+
+    Returns:
+        str: Compact formatted number.
+    """
+    return f"{value:.6g}"
 
 
 def _constraints_to_available_amounts(
