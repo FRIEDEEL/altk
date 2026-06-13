@@ -1,1 +1,0 @@
-from .mpms import readdata
