@@ -42,7 +42,7 @@ from altk.mpms import MpmsData
 from altk.mpms import MpmsData, Sample
 
 data = MpmsData.from_file("tests/data/sample_mpms_data_file.dat")
-data.set_sample(Sample(mass=0.177, molar_mass=151.88))
+data.set_sample(Sample(mass=0.100, molar_mass=100.0))
 
 temperature = data.T
 field = data.H
