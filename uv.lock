@@ -8,7 +8,7 @@ resolution-markers = [
 
 [[package]]
 name = "altk"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "chempy" },
@@ -17,7 +17,6 @@ dependencies = [
     { name = "numpy" },
     { name = "pandas" },
     { name = "periodictable" },
-    { name = "pytest" },
     { name = "scipy" },
     { name = "tifffile" },
 ]
@@ -35,7 +34,6 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.3.5" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "periodictable", specifier = ">=2.1.0" },
-    { name = "pytest", specifier = ">=9.0.1" },
     { name = "scipy", specifier = ">=1.16.3" },
     { name = "tifffile", specifier = ">=2026.5.15" },
 ]

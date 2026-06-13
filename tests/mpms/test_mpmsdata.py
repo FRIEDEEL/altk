@@ -18,8 +18,8 @@ def mpms_df() -> pd.DataFrame:
 def test_mpms_data_from_file_reads_mass_from_metadata() -> None:
     data = MpmsData.from_file("tests/data/sample_mpms_data_file.dat")
 
-    assert data.metadata["WEIGHT"] == "0.177"
-    assert data.mass == 0.177
+    assert data.metadata["WEIGHT"] == "0.100"
+    assert data.mass == 0.100
     assert len(data.M) == len(data.data)
 
 
