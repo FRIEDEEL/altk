@@ -1,7 +1,7 @@
 [project]
 name = "ALTK"
-version = "0.1.0"
-description = "Useful Arima-Tokunaga Lab Toolkit, ALTK."
+version = "0.2.0"
+description = "Personal Analysis & Lab Toolkit, ALTK."
 readme = "README.md"
 authors = [
     { name = "LiGuang", email = "guangli25@outlook.com" }
