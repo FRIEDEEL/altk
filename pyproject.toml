@@ -6,6 +6,7 @@ readme = "README.md"
 authors = [
     { name = "LiGuang", email = "guangli25@outlook.com" }
 ]
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "chempy>=0.10.1",
