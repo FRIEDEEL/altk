@@ -3,8 +3,10 @@
 **A**nalysis & **L**aboratory **T**ool**K**it, ALTK, is a personal Python toolkit
 for daily laboratory data processing, calculation, and visualization.
 
-The package is under active development. This README focuses on the currently
-usable public modules and keeps experimental APIs explicitly marked.
+The package is under active development. While the project remains in the
+`0.x` release series, APIs may change between minor versions. This README
+focuses on the currently usable public modules and keeps experimental APIs
+explicitly marked.
 
 ## Features
 
@@ -17,18 +19,24 @@ usable public modules and keeps experimental APIs explicitly marked.
 
 ## Installation
 
-ALTK is intended to be used as a local editable package. Clone the repository
-and install it into your active Python environment:
+ALTK currently targets Python 3.12 or newer and is intended to be used as a
+local editable package. Clone the repository and install the project with
+`uv`:
 
 ```bash
-cd <parent-directory>
-git clone <repository-url>
-cd <repository-directory>
+git clone https://github.com/FRIEDEEL/altk.git
+cd altk
+uv sync
+```
+
+Alternatively, install it into an existing Python environment with `pip`:
+
+```bash
 pip install -e .
 ```
 
-After installation, `altk` can be imported from any working directory that uses
-the same Python environment:
+After installation, `altk` can be imported from any working directory using
+the installed environment:
 
 ```python
 from altk.mpms import MpmsData
