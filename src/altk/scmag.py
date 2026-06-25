@@ -1,17 +1,14 @@
 import pandas as pd
 from pandas import DataFrame
-from matplotlib.axes import Axes
 
 
 import numpy as np
 
 import logging
-from typing import Union, Literal, Mapping
+from typing import Self
 
 from altk.utils._exceptions import DataFileInvalid
 from altk.typing.path import DataFile
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +28,15 @@ class ScmagSample:
 
     @property
     def electrode_area(self):
+        """The area of gold-coated electrode, in µm^2.
+        """
         if self._electrode_area is None:
             raise ValueError("Empty electrode area. Please set value.")
         return self._electrode_area
 
     @electrode_area.setter
     def electrode_area(self, value: float | None):
+
         if value is not None and value <= 0:
             raise ValueError(f"Electrode area should be larger than 0. Got {value}")
         else:
@@ -45,6 +45,8 @@ class ScmagSample:
 
     @property
     def thickness(self):
+        """The thickness of sample, in µm.
+        """
         if self._thickness is None:
             raise ValueError("Empty thickness value. Please set value.")
         return self._thickness
@@ -72,16 +74,21 @@ class ScmagData:
         data: DataFrame,
         sample: ScmagSample | None = None,
     ) -> None:
-        self._data = data
+        self.data = data
+        self.sample = sample
 
     @classmethod
-    def from_file(cls, file: DataFile):
+    def from_file(cls, file: DataFile, sample: ScmagSample | None = None):
         data = read_scmag_data_to_df(file)
-        return cls(data=data)
+        return cls(data=data, sample = sample)
 
     @property
     def data(self):
         return self._data
+
+    @data.setter
+    def data(self, value: DataFrame):
+        self._data = value
 
     @property
     def temperature(self):
@@ -99,11 +106,51 @@ class ScmagData:
     def charge(self):
         return self.data[COL_P]
 
+    @property
+    def sample(self):
+        if self._sample is None:
+            raise ValueError("Empty sample info. Please set sample info.")
+        return self._sample
+
+    @sample.setter
+    def sample(self, value: ScmagSample | None):
+        self._sample = value
+
+    def set_sample(self, sample: ScmagSample) -> Self:
+        self.sample = sample
+        return self
+
+    @property
+    def polarization(self):
+        A = self.sample.electrode_area
+        return self.charge / A
+
+    @property
+    def current_density(self):
+        A = self.sample.electrode_area
+        return self.current / A
     # aliases
+
+    @property
+    def T(self):
+        return self.temperature
+    @property
+    def t(self):
+        return self.time
+    @property
+    def I(self):
+        return self.current
+    @property
+    def Q(self):
+        return self.charge
+    @property
+    def J(self):
+        return self.current_density
+    @property
+    def P(self):
+        return self.polarization
     ...
 
-    def set_sample(self, sample: ScmagSample):
-        pass
 
 
 def read_scmag_data_to_df(file: DataFile):
