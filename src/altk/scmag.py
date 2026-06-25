@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pandas as pd
 from pandas import DataFrame
 
@@ -28,8 +29,7 @@ class ScmagSample:
 
     @property
     def electrode_area(self):
-        """The area of gold-coated electrode, in µm^2.
-        """
+        """The area of gold-coated electrode, in µm^2."""
         if self._electrode_area is None:
             raise ValueError("Empty electrode area. Please set value.")
         return self._electrode_area
@@ -45,8 +45,7 @@ class ScmagSample:
 
     @property
     def thickness(self):
-        """The thickness of sample, in µm.
-        """
+        """The thickness of sample, in µm."""
         if self._thickness is None:
             raise ValueError("Empty thickness value. Please set value.")
         return self._thickness
@@ -80,7 +79,7 @@ class ScmagData:
     @classmethod
     def from_file(cls, file: DataFile, sample: ScmagSample | None = None):
         data = read_scmag_data_to_df(file)
-        return cls(data=data, sample = sample)
+        return cls(data=data, sample=sample)
 
     @property
     def data(self):
@@ -129,28 +128,48 @@ class ScmagData:
     def current_density(self):
         A = self.sample.electrode_area
         return self.current / A
+
     # aliases
 
     @property
     def T(self):
         return self.temperature
+
     @property
     def t(self):
         return self.time
+
     @property
     def I(self):
         return self.current
+
     @property
     def Q(self):
         return self.charge
+
     @property
     def J(self):
         return self.current_density
+
     @property
     def P(self):
         return self.polarization
+
     ...
 
+    def interpolate_on_T(self, target_T_col: pd.Series) -> ScmagData:
+        new_data = pd.DataFrame()
+        cols = self.data.columns
+        for col in cols:
+            if col == COL_T:
+                new_data[COL_T] = target_T_col
+            else:
+                new_col = pd.Series(
+                    np.interp(target_T_col, self.data[COL_T], self.data[col].to_numpy())
+                )
+                new_data[col] = new_col
+        new_scmag_data = ScmagData(data = new_data, sample = self._sample)
+        return new_scmag_data
 
 
 def read_scmag_data_to_df(file: DataFile):
