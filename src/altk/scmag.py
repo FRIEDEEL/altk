@@ -40,9 +40,26 @@ class ScmagSample:
         self.thickness = thickness
         pass
 
+    @classmethod
+    def from_um(
+        cls, electrode_area: float | None = None, thickness: float | None = None
+    ) -> Self:
+        """ScmagSample, but units in µm instead of SI.
+        Caution: unit is still SI inside
+        """
+        if electrode_area is not None:
+            A = electrode_area * 1e-12
+        else:
+            A = electrode_area
+        if thickness is not None:
+            d = thickness * 1e-6
+        else:
+            d = thickness
+        return cls(A, d)
+
     @property
     def electrode_area(self):
-        """The area of gold-coated electrode, in µm^2."""
+        """The area of gold-coated electrode, in m^2."""
         if self._electrode_area is None:
             raise ValueError("Empty electrode area. Please set value.")
         return self._electrode_area
@@ -58,7 +75,7 @@ class ScmagSample:
 
     @property
     def thickness(self):
-        """The thickness of sample, in µm."""
+        """The thickness of sample, in m."""
         if self._thickness is None:
             raise ValueError("Empty thickness value. Please set value.")
         return self._thickness
@@ -170,14 +187,14 @@ class ScmagData:
 
     ...
 
-    def interpolate_on_T(
+    def interpolate_on_temperature(
         self,
-        target_T_col: pd.Series,
+        target_temperature: pd.Series,
         cols: ColNames = (COL_I, COL_P, COL_TIME),
     ) -> ScmagData:
         source_data = self.data.sort_values(COL_T)
         source_T = source_data[COL_T].to_numpy()
-        target_T = target_T_col.to_numpy()
+        target_T = target_temperature.to_numpy()
         target_T = target_T[(target_T >= source_T.min()) & (target_T <= source_T.max())]
 
         new_data = pd.DataFrame({COL_T: target_T})
