@@ -6,7 +6,7 @@ from pandas import DataFrame
 import numpy as np
 
 import logging
-from typing import Self
+from typing import Self, Literal, Iterable
 
 from altk.utils._exceptions import DataFileInvalid
 from altk.typing.path import DataFile
@@ -17,7 +17,20 @@ COL_T = "Temperature (K)"
 COL_I = "I (A)"
 COL_P = "P (C)"
 COL_TIME = "Time (s)"
+COL_MTIME = "Machine_Time (s)"
+COL_H = "Field (Oe)"
+COL_SENSOR = "Sensor (Ohm)"
 
+type ColName = Literal[
+    "Temperature (K)",
+    "I (A)",
+    "P (C)",
+    "Time (s)",
+    "Machine_Time (s)",
+    "Field (Oe)",
+    "Sensor (Ohm)",
+]
+type ColNames = Iterable[ColName]
 
 class ScmagSample:
     def __init__(
@@ -157,19 +170,23 @@ class ScmagData:
 
     ...
 
-    def interpolate_on_T(self, target_T_col: pd.Series) -> ScmagData:
-        new_data = pd.DataFrame()
-        cols = self.data.columns
+    def interpolate_on_T(
+        self,
+        target_T_col: pd.Series,
+        cols: ColNames = (COL_I, COL_P, COL_TIME),
+    ) -> ScmagData:
+        source_data = self.data.sort_values(COL_T)
+        source_T = source_data[COL_T].to_numpy()
+        target_T = target_T_col.to_numpy()
+        target_T = target_T[(target_T >= source_T.min()) & (target_T <= source_T.max())]
+
+        new_data = pd.DataFrame({COL_T: target_T})
         for col in cols:
             if col == COL_T:
-                new_data[COL_T] = target_T_col
-            else:
-                new_col = pd.Series(
-                    np.interp(target_T_col, self.data[COL_T], self.data[col].to_numpy())
-                )
-                new_data[col] = new_col
-        new_scmag_data = ScmagData(data = new_data, sample = self._sample)
-        return new_scmag_data
+                continue
+            new_data[col] = np.interp(target_T, source_T, source_data[col].to_numpy())
+
+        return ScmagData(data=new_data, sample=self._sample)
 
 
 def read_scmag_data_to_df(file: DataFile):
