@@ -1,5 +1,5 @@
 import pandas as pd
-import pytest
+import pytest 
 
 from altk.scmag import (
     COL_H,
@@ -105,12 +105,14 @@ def test_scmag_data_from_file_keeps_sample() -> None:
     assert data.P.iloc[0] == pytest.approx(0.5e-12)
 
 
-def test_interpolate_on_T_clips_target_grid_and_interpolates_default_columns(
+def test_interpolate_on_temperature_clips_target_grid_and_interpolates_default_columns(
     scmag_df: pd.DataFrame,
 ) -> None:
     data = ScmagData(scmag_df, sample=ScmagSample(electrode_area=2.0))
 
-    interpolated = data.interpolate_on_T(pd.Series([50.0, 125.0, 175.0, 250.0]))
+    interpolated = data.interpolate_on_temperature(
+        pd.Series([50.0, 125.0, 175.0, 250.0])
+    )
 
     pd.testing.assert_series_equal(
         interpolated.T,
@@ -136,12 +138,12 @@ def test_interpolate_on_T_clips_target_grid_and_interpolates_default_columns(
     )
 
 
-def test_interpolate_on_T_can_interpolate_explicit_extra_columns(
+def test_interpolate_on_temperature_can_interpolate_explicit_extra_columns(
     scmag_df: pd.DataFrame,
 ) -> None:
     data = ScmagData(scmag_df)
 
-    interpolated = data.interpolate_on_T(
+    interpolated = data.interpolate_on_temperature(
         pd.Series([125.0, 175.0]),
         cols=(COL_I, COL_P, COL_TIME, COL_H),
     )
@@ -152,10 +154,10 @@ def test_interpolate_on_T_can_interpolate_explicit_extra_columns(
     )
 
 
-def test_interpolate_on_T_sorts_nonmonotonic_temperature_source() -> None:
+def test_interpolate_on_temperature_sorts_nonmonotonic_temperature_source() -> None:
     data = ScmagData.from_file("tests/data/sample_scmag_nonmonotonic_temperature.dat")
 
-    interpolated = data.interpolate_on_T(pd.Series([125.0, 175.0]))
+    interpolated = data.interpolate_on_temperature(pd.Series([125.0, 175.0]))
 
     pd.testing.assert_series_equal(
         interpolated.I,
