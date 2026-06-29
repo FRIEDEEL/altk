@@ -1,6 +1,6 @@
 [project]
 name = "ALTK"
-version = "0.2.0"
+version = "0.3.0.dev1"
 description = "Personal Analysis & Lab Toolkit, ALTK."
 readme = "README.md"
 authors = [
