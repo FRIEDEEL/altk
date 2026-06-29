@@ -1,6 +1,6 @@
 from __future__ import annotations
 import pandas as pd
-from pandas import DataFrame
+from pandas import DataFrame, Series
 
 
 import numpy as np
@@ -20,6 +20,9 @@ COL_TIME = "Time (s)"
 COL_MTIME = "Machine_Time (s)"
 COL_H = "Field (Oe)"
 COL_SENSOR = "Sensor (Ohm)"
+COL_BETA = "Beta (K/s)"
+COL_I_OVER_BETA = "I/Beta (C/K)"
+COL_J_OVER_BETA = "J/Beta (C/m^2/K)"
 
 type ColName = Literal[
     "Temperature (K)",
@@ -29,6 +32,9 @@ type ColName = Literal[
     "Machine_Time (s)",
     "Field (Oe)",
     "Sensor (Ohm)",
+    "Beta (K/s)",
+    "I/Beta (C/K)",
+    "J/Beta (C/m^2/K)",
 ]
 type ColNames = Iterable[ColName]
 
@@ -186,6 +192,36 @@ class ScmagData:
         return self.polarization
 
     ...
+
+    @property
+    def beta(self) -> Series:
+        beta = np.gradient(
+            self.temperature.to_numpy(),
+            self.time.to_numpy(),
+        )
+        return pd.Series(beta, index=self.data.index, name=COL_BETA)
+
+    def current_per_beta(self, beta_min: float | None = None) -> Series:
+        beta = self.beta
+        if beta_min is not None:
+            beta = beta.mask(beta.abs() < beta_min)
+        return self.current / beta
+
+    def current_density_per_beta(self, beta_min: float | None = None) -> Series:
+        beta = self.beta
+        if beta_min is not None:
+            beta = beta.mask(beta.abs() < beta_min)
+        return self.current_density / beta
+
+    def with_beta_columns(self, beta_min: float | None = None) -> ScmagData:
+        new_data = self.data.copy()
+        new_data[COL_BETA] = self.beta
+        new_data[COL_I_OVER_BETA] = self.current_per_beta(beta_min=beta_min)
+        if self._sample is not None:
+            new_data[COL_J_OVER_BETA] = self.current_density_per_beta(
+                beta_min=beta_min
+            )
+        return ScmagData(data=new_data, sample=self._sample)
 
     def interpolate_on_temperature(
         self,
