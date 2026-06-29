@@ -1,0 +1,13 @@
+#Procedure: <mode_REDACTED.PMeasureImode>
+#Start time: 2026/02/26 22:06:29
+#Parameters:
+#	GPIB Address of K6517A: REDACTED
+#	GPIB Address of TC340: REDACTED
+#	GPIB Address of IPS120: REDACTED
+#	Filename: C:/REDACTED/sample_scmag_bad_data_marker.dat
+#	Delay: 0.2 s
+#	Change Range: True
+#	Range (This setting applies if the "Change Range" option is selected): 2e-08 A
+#Data
+Time (s),Machine_Time (s),Temperature (K),Field (Oe),I (A),P (C),Sensor (Ohm)
+0.0,1000.0,100.0,80000.0,1.0e-09,1.0e-12,100.0

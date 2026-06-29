@@ -3,6 +3,35 @@ Integrate future plan and notes during developing.
 
 
 ## Dated notes
+### 260629-042459
+ScmagData quantity design notes:
+- Public data access should be quantity-oriented rather than dataframe-column-oriented.
+  `COL_*` constants are still useful as internal/materialized column names, but user-facing
+  analysis APIs should prefer quantity names such as `T`, `I`, `Q`, `P`, `J`, `beta`,
+  `I_beta`, and `J_beta`.
+- Quantities that are uniquely determined by one measurement can be exposed as properties.
+  Examples: `P = Q / area`, `J = I / area`, `beta = dT / dt`, `I_beta = I / beta`,
+  and `J_beta = J / beta`. These may be computed on access or read from materialized
+  columns if a processed dataset already stores them.
+- Transformations that depend on external choices should return new `ScmagData` objects
+  rather than mutate the original data. Examples include interpolation, alignment, cropping,
+  smoothing with chosen parameters, and background subtraction.
+- Alignment is a multi-dataset operation, so it is better represented as a module-level
+  function than as a method of one `ScmagData`. The current `align_on()` API aligns several
+  datasets on a shared quantity grid from a reference dataset and clips the grid to the
+  common covered range.
+- Interpolation/alignment should resolve quantities through `ScmagData` properties, not
+  assume that every requested quantity exists as a raw dataframe column. This avoids the
+  ambiguity between raw columns and derived quantities such as `I_beta`.
+- Processed/aligned results can still be represented as `ScmagData` to preserve the idea
+  that `T`, `I`, `Q`, and derived quantities belong to the same measurement-derived data
+  object. Materialized derived columns should have distinct column names to avoid confusing
+  raw quantities (`Q`, `I`) with derived quantities (`P`, `J`).
+
+### 260625-050909
+TODOs for scmag:
+- generalize the interpolate API
+
 ### 260526-032559
 Add dataclass to structured data, in order to have easier access to the data, as well as containing the metadata within the structured data.
 
